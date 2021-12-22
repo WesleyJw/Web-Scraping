@@ -1,0 +1,103 @@
+---
+title: "Custom R Markdown Documents"
+author: "Dr. Wesley Lima"
+date: "`r format(Sys.time(), '%d %B, %Y')`"
+output:
+  MyTemplates::my_html_format:
+    toc: true
+    fig_caption: true
+---
+
+<img src="logo.png" width=150 height=70 style="position:absolute;top:60px;right:-10px;" />
+
+# Scraping the Web Page Fundamental
+
+
+```{r spider}
+library(rvest)
+library(httr)
+library(tidyverse)
+
+header <- add_headers( 
+                      `User-Agent` = 'Mozilla/5.0 (Linux; Android 6.0; Nexus 5 Build/MRA58N) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.101 Mobile Safari/537.36')
+
+sessao <- session("https://fundamentus.com.br/detalhes.php", header)
+
+
+papel_tables <- sessao %>% 
+    html_table() %>% 
+    first()
+
+
+#### Entrando em um papel
+
+download_paper_table <-  function(paper){
+  
+  message(paper)
+  paper_url <- str_glue("https://fundamentus.com.br/detalhes.php?papel={paper}")
+  papel_session <- session(paper_url,
+                         header)
+
+  #Get all Tables of the page in list format
+
+  aalr3_tables <- papel_session %>%
+    html_table(header = F)
+  
+
+  # Clean all tables and concactene 
+  clean_table1 <- function(table.paper){
+    #Return:
+    #A table in the long format
+    
+    par_number <- ncol(table.paper)/2
+    
+    nanmes <- unlist(table.paper[, seq(1, 2*par_number - 1, 2)])
+    values <- unlist(table.paper[, seq(2, 2*par_number, 2)])
+    
+    tibble(
+      names = nanmes,
+      values = values
+    )
+  }
+
+  #Merge all tables
+
+  table_long <- aalr3_tables %>% 
+    purrr::map_dfr(clean_table1) %>% 
+    bind_rows()
+  
+  
+  #Clean column of names
+  table_long %>% 
+    filter(names != values) %>% 
+    mutate(
+      names = janitor::make_clean_names(names) %>% 
+        str_replace_all("^x", "oscilacoes_"),
+      names = case_when(
+        str_detect(names, "receita_liquida$|ebit$|lucro_liquido$") ~ 
+          paste0(names, "_12_meses"),
+        str_detect(names, "receita_liquida_2$|ebit_2$|lucro_liquido_2$") ~
+          paste0(str_remove(names, "_2$"), "_3_meses"),
+        TRUE ~ names
+      )
+    ) %>% 
+    mutate(id = paper)
+
+}
+
+paper_vector <- papel_tables$Papel
+paper_datas <- tibble(paper = paper_vector) %>%
+  #sample_frac(size = .1) %>% 
+  with(paper) %>% 
+  furrr::future_map_dfr(download_paper_table) %>% 
+  pivot_wider(id_cols = 'id', names_from = "names", values_from = "values")
+
+
+View(paper_datas)
+#download_paper_table(papel_tables$Papel[1])
+```
+
+# Customisation
+
+
+
