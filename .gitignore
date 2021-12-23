@@ -1,4 +1,7 @@
-.Rproj.user
-.Rhistory
-.RData
-.Ruserdata
+.gitignore
+InvestingFinancialDataCrawler/dataIndex/
+InvestingFinancialDataCrawler/Dados_historicos_indices_financeiros_brasileiros.csv
+InvestingFinancialDataCrawler/.ipynb_checkpoints
+FundamentusInvestingData/.Rproj.user
+FundamentusInvestingData/.RData
+FundamentusInvestingData/.Rhistory
