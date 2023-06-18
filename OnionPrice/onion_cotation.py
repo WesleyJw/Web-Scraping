@@ -3,6 +3,7 @@
 from urllib.request import urlopen
 from urllib.error import HTTPError, URLError
 from bs4 import BeautifulSoup
+import re
 
 
 def html_parser(url):
@@ -40,13 +41,31 @@ def get_url_cotation(url):
     return url_cotations
 
 
+def string_repace(text):
+    text = re.sub("\n", " ", text)
+    return re.sub("\xa0", " ", text)
+
+
 def get_cotation(url):
     bs = html_parser(url)
     try:
-        content = bs.find('div', {'class': 'td-post-content'}).find_all('p')[2]
-        print(content)
+        content = bs.find(
+            'div', {'class': 'td-post-content'}).find_all('p')
+        onion_content = [
+            string_repace(onion.get_text()) for onion in content if ("cebola" in onion.get_text().lower()) and ('consumidor' not in onion.get_text().lower())]
+        return onion_content
+        #print(onion_content, "\n\n")
     except Exception as e:
         print(e)
+        return None
+
+
+def get_price(cotation_list):
+    if len(cotation_list) > 1:
+        cotation_list = [cotation_list[0] + cotation_list[1]]
+
+    price_list = cotation_list[0].split("são:")[1:3]
+    print(price_list, "\n\n")
 
 
 if __name__ == '__main__':
@@ -55,6 +74,8 @@ if __name__ == '__main__':
         print(url)
         cotations_links = get_url_cotation(url)
         for link in cotations_links:
-            get_cotation(link)
+            print(">>>> Link: ", link)
+            cotation_list = get_cotation(link)
+            get_price(cotation_list)
         url = get_page_url(url)
         break
